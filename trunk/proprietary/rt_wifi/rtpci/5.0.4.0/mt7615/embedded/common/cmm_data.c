@@ -4322,7 +4322,19 @@ VOID indicate_802_11_pkt(RTMP_ADAPTER *pAd, RX_BLK *pRxBlk, UCHAR wdev_idx)
 		data_len = pRxBlk->TransDataSize;
 	} else
 #endif /* HDR_TRANS_SUPPORT */
-		RTMP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pRxBlk, Header802_3);
+	{
+		if (pRxBlk->AmsduState == 0) {
+			RTMP_802_11_REMOVE_LLC_AND_CONVERT_TO_802_3(pRxBlk, Header802_3);
+		} else {
+			/* Use the A-MSDU subframe DA/SA instead of the 802.11 header. */
+			PUCHAR _pRemovedLLCSNAP = NULL, _pDA = NULL, _pSA = NULL;
+
+			_pDA = pRxBlk->pData - LENGTH_802_3;
+			_pSA = pRxBlk->pData - 8; /* MAC_ADDR_LEN + PAD */
+			CONVERT_TO_802_3(Header802_3, _pDA, _pSA, pRxBlk->pData,
+				pRxBlk->DataSize, _pRemovedLLCSNAP);
+		}
+	}
 
 	/* hex_dump("802_3_hdr", (UCHAR *)Header802_3, LENGTH_802_3); */
 	pData = pRxBlk->pData;
